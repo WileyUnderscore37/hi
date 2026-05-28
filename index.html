@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wiley</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Acidic';
+  src: url('Acidic.TTF') format('truetype');
+}
+@font-face {
+  font-family: 'HeadUpDaisy';
+  src: url('headupdaisy.ttf') format('truetype');
+}
+
+:root {
+  --grey-0:  #0b0c0d;
+  --grey-1:  #111315;
+  --grey-2:  #1a1c1f;
+  --grey-3:  #252829;
+  --grey-4:  #3a3d40;
+  --grey-5:  #5a5e62;
+  --grey-6:  #8a8f94;
+  --grey-7:  #b8bcc0;
+  --grey-8:  #d8dde0;
+  --grey-9:  #eef0f2;
+  --accent:  #c0c8d0;
+  --glow:    rgba(180,195,210,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body, html {
+  height: 100%;
+  overflow: hidden;
+  background: var(--grey-0);
+  font-family: 'Space Mono', monospace;
+  color: var(--grey-9);
+  cursor: crosshair;
+}
+
+/* ── IMAGE BACKGROUND ── */
+#page-bg {
+  position: fixed; inset: 0;
+  width: 100%; height: 100%;
+  background-image: url('youth.jpg');
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+  filter: brightness(0.55);
+}
+
+/* ── NOISE ── */
+.noise {
+  position: fixed; inset: 0; z-index: 1; pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
+  mix-blend-mode: overlay;
+}
+
+/* ── VIGNETTE ── */
+.vignette {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background: radial-gradient(ellipse at center,
+    transparent 30%,
+    rgba(0,0,0,0.55) 100%
+  );
+}
+
+/* ── SCANLINE ── */
+.scanline {
+  position: fixed; left: 0; width: 100%; height: 2px;
+  background: linear-gradient(transparent, rgba(180,195,210,0.04), transparent);
+  z-index: 3; pointer-events: none;
+  animation: scan 8s linear infinite;
+}
+@keyframes scan { 0%{top:-2px} 100%{top:100vh} }
+
+/* ── GRID OVERLAY ── */
+.grid-overlay {
+  position: fixed; inset: 0; z-index: 2; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(180,195,210,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180,195,210,0.025) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* ── ENTER OVERLAY ── */
+#overlay {
+  position: fixed; inset: 0; z-index: 999;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  background: var(--grey-0);
+  transition: opacity 0.7s ease;
+}
+#overlay.hide { opacity: 0; pointer-events: none; }
+
+.enter-word {
+  font-family: 'Acidic', 'Space Mono', monospace;
+  font-size: clamp(48px, 9vw, 96px);
+  letter-spacing: 0.18em;
+  color: var(--grey-9);
+  line-height: 1;
+  margin-bottom: 28px;
+  position: relative;
+}
+.enter-word::after {
+  content: attr(data-text);
+  position: absolute; inset: 0;
+  color: var(--grey-5);
+  filter: blur(18px);
+  z-index: -1;
+}
+
+.enter-hint {
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  color: var(--grey-5);
+  text-transform: uppercase;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 50%{ opacity: 0.15; } }
+
+.enter-line {
+  width: 1px; height: 48px;
+  background: linear-gradient(to bottom, transparent, var(--grey-5), transparent);
+  margin-bottom: 24px;
+  animation: lineGrow 2s ease-in-out infinite;
+}
+@keyframes lineGrow {
+  0%,100%{ transform: scaleY(0.4); opacity: 0.3; }
+  50%{ transform: scaleY(1); opacity: 0.8; }
+}
+
+/* ── MAIN UI ── */
+#main-ui {
+  position: fixed; inset: 0; z-index: 10;
+  opacity: 0; visibility: hidden;
+  transition: opacity 1s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+#main-ui.active { opacity: 1; visibility: visible; }
+
+/* ── 3D CARD SCENE ── */
+.card-scene {
+  width: 300px; height: 420px;
+  perspective: 900px;
+  position: relative;
+  cursor: pointer;
+}
+
+.card {
+  width: 100%; height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.75s cubic-bezier(.4,0,.2,1);
+}
+.card.flipped { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute; inset: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #111315;
+  border: 1px solid #2a2d30;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face.card-front { transform: rotateY(0deg); }
+.card-face.card-back  { transform: rotateY(180deg); }
+
+.card-face-bg {
+  position: absolute; inset: 0;
+  background: linear-gradient(160deg,#1a1d20 0%,#0b0c0d 60%);
+}
+.card-face-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(180,195,210,.04) 1px, transparent 1px),
+    linear-gradient(90deg,rgba(180,195,210,.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+.card-shine {
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: none; border-radius: 16px;
+  opacity: 0; transition: opacity .12s;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,.07) 0%, transparent 65%);
+}
+.card-front-content {
+  position: relative; z-index: 1;
+  display: flex; flex-direction: column;
+  align-items: center; padding: 36px 24px 24px; height: 100%;
+}
+
+/* Animated rings around scene */
+.ring {
+  position: absolute;
+  border-radius: 2px;
+  pointer-events: none;
+  transition: border-color 0.06s ease, transform 0.06s ease, box-shadow 0.06s ease;
+}
+.ring-1 { inset: -22px; border: 1px solid rgba(160,175,190,0.1); }
+.ring-2 { inset: -44px; border: 1px solid rgba(160,175,190,0.05); }
+.ring-3 { inset: -70px; border: 1px solid rgba(160,175,190,0.025); }
+
+/* ── AVATAR ── */
+.avatar-wrap {
+  width: 90px; height: 90px;
+  position: relative; flex-shrink: 0;
+  margin-bottom: 20px;
+}
+.avatar-wrap::before {
+  content: '';
+  position: absolute; inset: -5px;
+  border: 1px solid rgba(160,175,190,0.25);
+  border-radius: 4px;
+  animation: avatarGlow 3s ease-in-out infinite;
+}
+.avatar-wrap::after {
+  content: '';
+  position: absolute; inset: -11px;
+  border: 1px solid rgba(160,175,190,0.1);
+  border-radius: 4px;
+}
+@keyframes avatarGlow {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(160,175,190,0); }
+  50%    { box-shadow: 0 0 14px 0 rgba(160,175,190,0.12); }
+}
+.avatar {
+  width: 90px; height: 90px;
+  object-fit: cover;
+  filter: grayscale(100%) contrast(1.05);
+  display: block; position: relative; z-index: 1;
+  border-radius: 2px;
+}
+
+/* ── NAME ── */
+.name-block { text-align: center; margin-bottom: 16px; position: relative; }
+.name {
+  font-family: 'Acidic', 'Space Mono', monospace;
+  font-size: 46px;
+  letter-spacing: 0.1em;
+  color: var(--grey-9);
+  line-height: 1; display: block;
+}
+.name-shadow {
+  position: absolute; inset: 0;
+  font-family: 'Acidic', 'Space Mono', monospace;
+  font-size: 46px; letter-spacing: 0.1em;
+  color: var(--grey-6);
+  filter: blur(12px);
+  z-index: -1; pointer-events: none; opacity: 0.5;
+  display: block;
+}
+.name-sub {
+  font-size: 9px; letter-spacing: 0.45em;
+  color: var(--grey-5); text-transform: uppercase;
+  margin-top: 7px; display: block;
+}
+.status-dot {
+  display: inline-block;
+  width: 5px; height: 5px;
+  background: var(--grey-6); border-radius: 50%;
+  margin-right: 5px; vertical-align: middle;
+  animation: statusPulse 2.5s ease-in-out infinite;
+}
+@keyframes statusPulse {
+  0%,100%{ opacity: 0.3; transform: scale(0.8); }
+  50%    { opacity: 1;   transform: scale(1.2); }
+}
+
+/* ── DIVIDER ── */
+.divider {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; margin: 14px 0 16px;
+}
+.divider-line {
+  flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, #2a2d30, transparent);
+}
+.divider-dot { width: 3px; height: 3px; background: #3a3d40; border-radius: 50%; }
+
+/* ── BIO ── */
+.front-bio {
+  font-size: 9px;
+  line-height: 1.75;
+  letter-spacing: 0.04em;
+  color: var(--grey-5);
+  text-align: center;
+  padding: 0 4px;
+  margin-bottom: auto;
+  font-style: italic;
+}
+
+/* ── BADGES ── */
+.badges {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  justify-content: center; margin-bottom: auto;
+}
+.badge {
+  font-size: 8px; letter-spacing: 0.3em; text-transform: uppercase;
+  padding: 4px 10px; border: 1px solid #2a2d30; color: var(--grey-5);
+}
+
+/* ── LINKS ── */
+.links { display: flex; justify-content: center; gap: 22px; margin-top: 20px; }
+.icon-link {
+  position: relative; width: 24px; height: 24px;
+  opacity: 0.35;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.icon-link:hover { opacity: 1; transform: translateY(-2px); }
+.icon-link img { width: 100%; height: 100%; filter: invert(1) brightness(.85); }
+.tooltip {
+  position: absolute; bottom: calc(100% + 8px); left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  font-size: 8px; letter-spacing: 0.2em;
+  color: var(--grey-0); background: var(--grey-8);
+  padding: 3px 8px; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+  white-space: nowrap;
+}
+.tooltip.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.card-hint {
+  font-size: 8px; letter-spacing: 0.3em; color: #3a3d40;
+  text-transform: uppercase; margin-top: 14px;
+}
+
+.card-back {
+  display: flex; flex-direction: column;
+  justify-content: center; padding: 32px;
+}
+.card-back-inner {
+  display: flex; flex-direction: column;
+  height: 100%; justify-content: center; align-items: center;
+  position: relative; z-index: 1; gap: 0;
+}
+.back-label {
+  font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase;
+  color: #3a3d40; margin-bottom: 32px; align-self: flex-start;
+}
+.back-btn {
+  width: 100%;
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px;
+  border: 1px solid #2a2d30;
+  background: transparent;
+  color: var(--grey-7);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-decoration: none;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  margin-bottom: -1px;
+  position: relative;
+}
+.back-btn:first-of-type { border-radius: 4px 4px 0 0; }
+.back-btn:last-of-type  { border-radius: 0 0 4px 4px; margin-bottom: 0; }
+.back-btn:hover {
+  border-color: var(--grey-5);
+  background: rgba(160,175,190,0.04);
+  color: var(--grey-9);
+  z-index: 1;
+}
+.back-btn-icon {
+  width: 18px; height: 18px; flex-shrink: 0; opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.back-btn:hover .back-btn-icon { opacity: 1; }
+.back-btn-icon img { width: 100%; height: 100%; filter: invert(1) brightness(.85); display: block; }
+.back-btn-label { flex: 1; }
+.back-btn-arrow {
+  font-size: 10px; color: var(--grey-4); transition: color 0.2s, transform 0.2s;
+}
+.back-btn:hover .back-btn-arrow { color: var(--grey-6); transform: translateX(3px); }
+
+/* ── BEAT BAR ── */
+.beat-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 1px;
+  background: transparent;
+  z-index: 20;
+  transition: background 0.05s, height 0.05s;
+}
+
+/* ── CORNER MARKS ── */
+.corner-mark {
+  position: fixed;
+  width: 12px; height: 12px;
+  z-index: 20;
+  transition: width 0.06s, height 0.06s;
+}
+.corner-mark::before, .corner-mark::after {
+  content: ''; position: absolute;
+  background: var(--grey-6);
+}
+.corner-mark::before { width: 100%; height: 1px; top: 0; left: 0; }
+.corner-mark::after  { width: 1px; height: 100%; top: 0; left: 0; }
+
+.cm-tl { top: 18px; left: 18px; }
+.cm-tr { top: 18px; right: 18px; transform: scaleX(-1); }
+.cm-bl { bottom: 18px; left: 18px; transform: scaleY(-1); }
+.cm-br { bottom: 18px; right: 18px; transform: scale(-1,-1); }
+
+/* ── SIDE LABELS ── */
+.side-label {
+  position: fixed;
+  font-size: 8px;
+  letter-spacing: 0.35em;
+  color: var(--grey-4);
+  text-transform: uppercase;
+  z-index: 20;
+}
+.side-label-l {
+  left: 18px; bottom: 48px;
+  writing-mode: vertical-lr;
+  transform: rotate(180deg);
+}
+.side-label-r {
+  right: 18px; bottom: 48px;
+  writing-mode: vertical-lr;
+}
+
+/* ── VOLUME ── */
+.vol-wrap {
+  position: fixed; top: 18px; left: 18px; z-index: 50;
+  display: flex; align-items: center; gap: 0;
+}
+.vol-btn {
+  width: 30px; height: 30px;
+  border: 1px solid var(--grey-3);
+  background: rgba(17,19,21,0.7);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: border-color 0.2s, background 0.2s;
+}
+.vol-btn:hover { border-color: var(--grey-5); }
+.vol-btn svg { width: 13px; fill: var(--grey-7); }
+
+.vol-slider-wrap {
+  overflow: hidden; width: 0; height: 30px;
+  border: 1px solid var(--grey-3);
+  border-left: none;
+  display: flex; align-items: center;
+  transition: width 0.3s ease, padding 0.3s ease;
+  background: rgba(17,19,21,0.7);
+  backdrop-filter: blur(4px);
+}
+.vol-slider-wrap.open { width: 90px; padding: 0 8px; }
+
+input[type=range] {
+  -webkit-appearance: none; width: 100%; background: transparent;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none; width: 9px; height: 9px;
+  background: var(--grey-7); cursor: pointer; margin-top: -4px;
+}
+input[type=range]::-webkit-slider-runnable-track {
+  height: 1px; background: var(--grey-4);
+}
+
+/* ── BPM ── */
+.bpm-display {
+  position: fixed; top: 18px; right: 18px;
+  font-size: 8px; letter-spacing: 0.35em;
+  color: var(--grey-4); z-index: 50;
+  text-transform: uppercase;
+}
+
+/* ── CURSOR TRAIL ── */
+.cursor-dot {
+  position: fixed;
+  width: 4px; height: 4px;
+  background: var(--grey-6);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.1s;
+  transform: translate(-50%, -50%);
+}
+
+</style>
+</head>
+<body>
+
+<!-- ENTER SCREEN -->
+<div id="overlay">
+  <div class="enter-word" data-text="WILEY">WILEY</div>
+  <div class="enter-line"></div>
+  <div class="enter-hint">click anywhere to enter</div>
+</div>
+
+<!-- MAIN UI -->
+<div id="main-ui">
+  <div id="page-bg"></div>
+  <audio id="audio-bg" preload="auto"></audio>
+  <div class="noise"></div>
+  <div class="vignette"></div>
+  <div class="grid-overlay"></div>
+  <div class="scanline"></div>
+  <div class="beat-bar" id="beatBar"></div>
+
+  <div class="corner-mark cm-tl" id="cm-tl"></div>
+  <div class="corner-mark cm-tr" id="cm-tr"></div>
+  <div class="corner-mark cm-bl" id="cm-bl"></div>
+  <div class="corner-mark cm-br" id="cm-br"></div>
+
+  <div class="side-label side-label-r" id="sideLabelR">--:--:--</div>
+
+  <div class="vol-wrap">
+    <div class="vol-btn" onclick="toggleVol()">
+      <svg viewBox="0 0 24 24"><path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.85 14,18.71V20.77C18.03,19.86 21,16.28 21,12C21,7.72 18.03,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16.03C15.5,15.29 16.5,13.77 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/></svg>
+    </div>
+    <div class="vol-slider-wrap" id="volBox">
+      <input type="range" id="volSlider" min="0" max="1" step="0.01" value="0.5">
+    </div>
+  </div>
+
+
+
+  <div class="card-scene" id="cardScene">
+    <div class="ring ring-1" id="ring1"></div>
+    <div class="ring ring-2" id="ring2"></div>
+    <div class="ring ring-3" id="ring3"></div>
+
+    <div class="card" id="card">
+
+      <!-- FRONT -->
+      <div class="card-face card-front">
+        <div class="card-face-bg"></div>
+        <div class="card-shine" id="shineFront"></div>
+        <div class="card-front-content">
+          <div class="avatar-wrap">
+            <img src="wiley.jpg" alt="Wiley" class="avatar">
+          </div>
+          <div class="name-block">
+            <span class="name-shadow" aria-hidden="true">Wiley</span>
+            <span class="name" id="nameEl">Wiley</span>
+            <span class="name-sub"><span class="status-dot"></span>team lead</span>
+          </div>
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-dot"></div>
+            <div class="divider-line"></div>
+          </div>
+          <div class="front-bio">I've always felt alone. My whole life. For as long as I can remember. I don't know if I like it or if I'm used to it, but I know this; being lonely does things to you. Feeling shit and bitter and angry all the time just... eats away at you...</div>
+          <div class="card-hint">click to flip</div>
+        </div>
+      </div>
+
+      <!-- BACK -->
+      <div class="card-face card-back">
+        <div class="card-face-bg" style="position:absolute;inset:0"></div>
+        <div class="card-shine" id="shineBack"></div>
+        <div class="card-back-inner">
+          <div class="back-label">// links</div>
+          <a href="javascript:void(0)" class="back-btn" onclick="copyDiscord('wileyasik', this); event.stopPropagation()">
+            <span class="tooltip">copied!</span>
+            <span class="back-btn-icon"><img src="discord.png" alt="Discord"></span>
+            <span class="back-btn-label">Discord</span>
+            <span class="back-btn-arrow">&#8594;</span>
+          </a>
+          <a href="https://steamcommunity.com/id/sanyacopter10/" target="_blank" class="back-btn" onclick="event.stopPropagation()">
+            <span class="back-btn-icon"><img src="steam.png" alt="Steam"></span>
+            <span class="back-btn-label">Steam</span>
+            <span class="back-btn-arrow">&#8594;</span>
+          </a>
+          <a href="https://www.youtube.com/@wiley_37" target="_blank" class="back-btn" onclick="event.stopPropagation()">
+            <span class="back-btn-icon"><img src="youtube.png" alt="YouTube"></span>
+            <span class="back-btn-label">YouTube</span>
+            <span class="back-btn-arrow">&#8594;</span>
+          </a>
+          <div class="card-hint" id="cardHint" style="margin-top:20px">click to flip back</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- CURSOR TRAIL DOTS -->
+<script>
+  const trailDots = [];
+  for (let i = 0; i < 5; i++) {
+    const d = document.createElement('div');
+    d.className = 'cursor-dot';
+    document.body.appendChild(d);
+    trailDots.push({ el: d, x: 0, y: 0 });
+  }
+
+  let mouseX = 0, mouseY = 0;
+  document.addEventListener('mousemove', e => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    trailDots[0].x = mouseX; trailDots[0].y = mouseY;
+    trailDots[0].el.style.opacity = '0.7';
+  });
+
+  function animateTrail() {
+    for (let i = 1; i < trailDots.length; i++) {
+      trailDots[i].x += (trailDots[i-1].x - trailDots[i].x) * 0.45;
+      trailDots[i].y += (trailDots[i-1].y - trailDots[i].y) * 0.45;
+      trailDots[i].el.style.left = trailDots[i].x + 'px';
+      trailDots[i].el.style.top  = trailDots[i].y + 'px';
+      trailDots[i].el.style.opacity = String(0.6 - i * 0.12);
+    }
+    trailDots[0].el.style.left = trailDots[0].x + 'px';
+    trailDots[0].el.style.top  = trailDots[0].y + 'px';
+    requestAnimationFrame(animateTrail);
+  }
+  animateTrail();
+</script>
+
+<script>
+const overlay  = document.getElementById('overlay');
+const mainUi   = document.getElementById('main-ui');
+const audio    = document.getElementById('audio-bg');
+const beatBar  = document.getElementById('beatBar');
+const ring1    = document.getElementById('ring1');
+const ring2    = document.getElementById('ring2');
+const ring3    = document.getElementById('ring3');
+const nameEl   = document.getElementById('nameEl');
+const corners  = ['cm-tl','cm-tr','cm-bl','cm-br'].map(id => document.getElementById(id));
+
+// Clock
+const timeLabel = document.getElementById('sideLabelR');
+function tick() {
+  const n = new Date();
+  timeLabel.textContent = n.toTimeString().slice(0,8);
+}
+tick(); setInterval(tick, 1000);
+
+// Audio tracks
+const tracks = [
+  'theyouthinmyblood.mp3',
+  'laststand.mp3',
+  'embrace.mp3',
+  'stayhere.mp3',
+  'its.mp3',
+  'hopeless.mp3'
+];
+let currentTrack = '';
+function pickNext() {
+  const pool = tracks.filter(t => t !== currentTrack);
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+currentTrack = pickNext();
+audio.src = currentTrack;
+audio.volume = 0.5;
+
+audio.addEventListener('ended', () => {
+  currentTrack = pickNext();
+  audio.src = currentTrack;
+  audio.volume = parseFloat(document.getElementById('volSlider').value);
+  audio.play().catch(() => {});
+});
+
+// Enter
+overlay.addEventListener('click', () => {
+  overlay.classList.add('hide');
+  setTimeout(() => overlay.style.display = 'none', 750);
+  mainUi.classList.add('active');
+  audio.volume = parseFloat(document.getElementById('volSlider').value);
+  audio.play().catch(() => {});
+  startBeatDetect();
+});
+
+// Beat detect
+let bpmSmooth = 0, beatHistory = [], lastBeat = 0, beatFlash = null;
+let fallbackBeatTimer = null;
+
+function startBeatDetect() {
+  if (!fallbackBeatTimer) fallbackBeatTimer = setInterval(fakeBeat, 550);
+}
+
+function fakeBeat() { onBeat(0.45); }
+
+function onBeat(intensity) {
+  const s1 = 1 + intensity * 0.07;
+  const s2 = 1 + intensity * 0.045;
+  const s3 = 1 + intensity * 0.025;
+
+  ring1.style.transform = `scale(${s1})`;
+  ring1.style.borderColor = `rgba(160,175,190,${0.12 + intensity * 0.5})`;
+  ring1.style.boxShadow = `inset 0 0 ${intensity * 20}px rgba(160,175,190,${intensity * 0.07})`;
+  ring2.style.transform = `scale(${s2})`;
+  ring2.style.borderColor = `rgba(160,175,190,${0.05 + intensity * 0.22})`;
+  ring3.style.transform = `scale(${s3})`;
+  ring3.style.borderColor = `rgba(160,175,190,${0.02 + intensity * 0.1})`;
+
+  beatBar.style.background = `rgba(180,195,210,${intensity * 0.4})`;
+  beatBar.style.height = `${1 + intensity * 2}px`;
+
+  clearTimeout(beatFlash);
+  beatFlash = setTimeout(() => {
+    ring1.style.transform = ring2.style.transform = ring3.style.transform = '';
+    ring1.style.borderColor = ring2.style.borderColor = ring3.style.borderColor = '';
+    ring1.style.boxShadow = '';
+    beatBar.style.background = '';
+    beatBar.style.height = '1px';
+  }, 130);
+}
+
+// ── 3D CARD: TILT + FLIP ──
+const cardScene   = document.getElementById('cardScene');
+const card3d      = document.getElementById('card');
+const shineFront  = document.getElementById('shineFront');
+const shineBack   = document.getElementById('shineBack');
+
+let isFlipped = false;
+let tiltX = 0, tiltY = 0, targetX = 0, targetY = 0;
+let tiltRaf = null;
+let isFlipping = false;
+
+card3d.addEventListener('click', () => {
+  isFlipped = !isFlipped;
+  isFlipping = true;
+  tiltX = 0; tiltY = 0; targetX = 0; targetY = 0;
+  if (tiltRaf) { cancelAnimationFrame(tiltRaf); tiltRaf = null; }
+  card3d.style.transition = 'transform 0.75s cubic-bezier(.4,0,.2,1)';
+  card3d.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+  shineFront.style.opacity = '0';
+  shineBack.style.opacity  = '0';
+  setTimeout(() => { isFlipping = false; }, 800);
+});
+
+cardScene.addEventListener('mousemove', e => {
+  if (isFlipping) return;
+  const r  = cardScene.getBoundingClientRect();
+  const cx = r.left + r.width / 2;
+  const cy = r.top  + r.height / 2;
+  targetX = -((e.clientY - cy) / (r.height / 2)) * 13;
+  targetY =  ((e.clientX - cx) / (r.width  / 2)) * 13;
+
+  const px = ((e.clientX - r.left) / r.width)  * 100;
+  const py = ((e.clientY - r.top)  / r.height) * 100;
+  const activeShine = isFlipped ? shineBack : shineFront;
+  activeShine.style.background = `radial-gradient(circle at ${px}% ${py}%, rgba(255,255,255,.08) 0%, transparent 60%)`;
+  activeShine.style.opacity = '1';
+
+  if (!tiltRaf) tiltRaf = requestAnimationFrame(animateTilt);
+});
+
+cardScene.addEventListener('mouseleave', () => {
+  if (isFlipping) return;
+  targetX = 0; targetY = 0;
+  shineFront.style.opacity = '0';
+  shineBack.style.opacity  = '0';
+  if (!tiltRaf) tiltRaf = requestAnimationFrame(animateTilt);
+});
+
+function animateTilt() {
+  if (isFlipping) { tiltRaf = null; return; }
+  tiltX += (targetX - tiltX) * 0.1;
+  tiltY += (targetY - tiltY) * 0.1;
+  card3d.style.transition = 'none';
+  card3d.style.transform = isFlipped
+    ? `rotateY(${180 + tiltY}deg) rotateX(${tiltX}deg)`
+    : `rotateY(${tiltY}deg) rotateX(${tiltX}deg)`;
+  const moving = Math.abs(targetX - tiltX) > 0.05 || Math.abs(targetY - tiltY) > 0.05;
+  if (moving) {
+    tiltRaf = requestAnimationFrame(animateTilt);
+  } else {
+    tiltRaf = null;
+    if (targetX === 0 && targetY === 0) {
+      card3d.style.transition = 'transform 0.5s cubic-bezier(.4,0,.2,1)';
+      card3d.style.transform = isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)';
+    }
+  }
+}
+
+function copyDiscord(nick, el) {
+  navigator.clipboard.writeText(nick).catch(()=>{});
+  const tip = el.querySelector('.tooltip');
+  tip.classList.add('show');
+  setTimeout(() => tip.classList.remove('show'), 2000);
+}
+
+function toggleVol() {
+  document.getElementById('volBox').classList.toggle('open');
+}
+
+document.getElementById('volSlider').addEventListener('input', e => {
+  const v = parseFloat(e.target.value);
+  audio.volume = v;
+  audio.muted = v === 0;
+});
+</script>
+</body>
+</html>
