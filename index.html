@@ -465,7 +465,6 @@ input[type=range]::-webkit-slider-runnable-track {
   height: 1px; background: var(--grey-4);
 }
 
-/* ── BPM ── */
 .bpm-display {
   position: fixed; top: 18px; right: 18px;
   font-size: 8px; letter-spacing: 0.35em;
@@ -473,7 +472,6 @@ input[type=range]::-webkit-slider-runnable-track {
   text-transform: uppercase;
 }
 
-/* ── CURSOR TRAIL ── */
 .cursor-dot {
   position: fixed;
   width: 4px; height: 4px;
@@ -490,11 +488,10 @@ input[type=range]::-webkit-slider-runnable-track {
 </head>
 <body>
 
-<!-- ENTER SCREEN -->
 <div id="overlay">
   <div class="enter-word" data-text="WILEY">WILEY</div>
   <div class="enter-line"></div>
-  <div class="enter-hint">click anywhere to enter</div>
+  <div class="enter-hint">click.</div>
 </div>
 
 <!-- MAIN UI -->
@@ -532,7 +529,6 @@ input[type=range]::-webkit-slider-runnable-track {
 
     <div class="card" id="card">
 
-      <!-- FRONT -->
       <div class="card-face card-front">
         <div class="card-face-bg"></div>
         <div class="card-shine" id="shineFront"></div>
@@ -555,7 +551,6 @@ input[type=range]::-webkit-slider-runnable-track {
         </div>
       </div>
 
-      <!-- BACK -->
       <div class="card-face card-back">
         <div class="card-face-bg" style="position:absolute;inset:0"></div>
         <div class="card-shine" id="shineBack"></div>
@@ -585,7 +580,6 @@ input[type=range]::-webkit-slider-runnable-track {
   </div>
 </div>
 
-<!-- CURSOR TRAIL DOTS -->
 <script>
   const trailDots = [];
   for (let i = 0; i < 5; i++) {
@@ -643,7 +637,11 @@ const tracks = [
   'embrace.mp3',
   'stayhere.mp3',
   'its.mp3',
-  'hopeless.mp3'
+  'hopeless.mp3',
+  'rem1.mp3',
+  'rem2.mp3',
+  'rem3.mp3',
+  'rem4.mp3'
 ];
 let currentTrack = '';
 function pickNext() {
@@ -661,7 +659,6 @@ audio.addEventListener('ended', () => {
   audio.play().catch(() => {});
 });
 
-// Enter
 overlay.addEventListener('click', () => {
   overlay.classList.add('hide');
   setTimeout(() => overlay.style.display = 'none', 750);
@@ -671,7 +668,6 @@ overlay.addEventListener('click', () => {
   startBeatDetect();
 });
 
-// Beat detect
 let bpmSmooth = 0, beatHistory = [], lastBeat = 0, beatFlash = null;
 let fallbackBeatTimer = null;
 
@@ -707,7 +703,7 @@ function onBeat(intensity) {
   }, 130);
 }
 
-// ── 3D CARD: TILT + FLIP ──
+// ── 3D CARD
 const cardScene   = document.getElementById('cardScene');
 const card3d      = document.getElementById('card');
 const shineFront  = document.getElementById('shineFront');
